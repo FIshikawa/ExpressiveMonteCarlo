@@ -5,3 +5,5 @@ experiments to understand Monte Carlo methods
 - Compare hybrid Monte Carlo method and Langevin dynamics
   - implement Hybrid Monte Carlo
   - implement Langevin equation with stochastic integrators
+## Coding style 
+Follow the Google C++ coding style
