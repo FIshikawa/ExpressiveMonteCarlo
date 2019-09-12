@@ -1,4 +1,5 @@
 set(PROGS
+  chain
 )
 foreach(name ${PROGS})
   set(target_name test_${name})

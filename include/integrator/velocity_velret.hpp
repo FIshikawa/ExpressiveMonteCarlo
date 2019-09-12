@@ -9,6 +9,7 @@ namespace integrator {
 class VelocityVelret{
 public:
   static std::string name() { return "Velocity Verlet method"; }
+  // z[0...n-1]: position, z[n...2n-1]: momentum
   VelocityVelret(unsigned int dim) : dim_(dim), k1_(dim), k2_(dim) {}
   template<class F>
   void step(double t, double h, std::vector<double>& y, F const& f) const {

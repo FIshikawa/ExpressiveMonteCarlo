@@ -1,5 +1,6 @@
 set(PROGS
   metropolis
+  hybrid_monte_carlo
 )
 foreach(name ${PROGS})
   set(target_name test_${name})
