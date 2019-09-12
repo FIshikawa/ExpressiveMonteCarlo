@@ -1,5 +1,5 @@
-#ifndef INTEGRATOR_DISSIPATED_RUNGEKUTTA_HPP
-#define INTEGRATOR_DISSIPATED_RUNGEKUTTA_HPP
+#ifndef INTEGRATOR_HEUN_SCHEME_HPP
+#define INTEGRATOR_HEUN_SCHEME_HPP
 
 #include <cmath>
 #include <string>
@@ -8,14 +8,13 @@
 
 namespace integrator{
 
-class DissipatedRungeKutta{
+class HeunScheme{
 public:
-  static std::string name() { return "Disspated Dynamics, Heun Scheme (Runge-Kutta)"; }
-  DissipatedRungeKutta(double T, double gamma, unsigned int dim) : dim_(dim), gamma_(gamma), T_(T),  k1_(dim), k2_(dim),yt_(dim) {}
+  static std::string name() { return "Stochastic Integrator, Heun Scheme (Runge-Kutta)"; }
+  HeunScheme(double T, double gamma, unsigned int dim) : dim_(dim), gamma_(gamma), T_(T),  k1_(dim), k2_(dim),yt_(dim) {}
 
   template <class Rand, class F>
   void step(double t, double h, std::vector<double>& y, F const& f, Rand & mt) const {
-    // const double kB = 1.38064852 / pow(10.0,23.0)
     std::normal_distribution<> normal_dist(0.0,1.0);
     unsigned int num_ = dim_ / 2;
     double *x = &y[0];
@@ -50,4 +49,4 @@ protected:
 
 } //end namespace
 
-#endif //INTEGRATOR_DISSIPATED_RUNGEKUTTA_HPP
+#endif //INTEGRATOR_HEUN_SCHEME_HPP

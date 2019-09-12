@@ -1,5 +1,5 @@
-#ifndef INTEGRATOR_DISSIPATED_EULER_HPP
-#define INTEGRATOR_DISSIPATED_EULER_HPP
+#ifndef INTEGRATOR_EULER_MARUYAMA_SCHEME_HPP
+#define INTEGRATOR_EULER_MARUYAMA_SCHEME_HPP
 
 #include <cmath>
 #include <string>
@@ -8,14 +8,13 @@
 
 namespace integrator{
 
-class DissipatedEuler{
+class EulerMaruyamaScheme{
 public:
-  static std::string name() { return "Disspated Dynamics, Euler-Maruyama Scheme (Euler)"; }
+  static std::string name() { return "Stochastic Integrator, Euler-Maruyama Scheme (Euler)"; }
   DissipatedEuler(double T, double gamma, unsigned int dim) : dim_(dim), gamma_(gamma), T_(T), k_(dim){}
 
   template <class Rand, class F>
   void step(double t, double h, std::vector<double>& y, F const& f, Rand & mt) const {
-    // const double kB = 1.38064852 / pow(10.0,23.0)
     std::normal_distribution<> normal_dist(0.0,1.0);
     unsigned int num_ = dim_ / 2;
     double *x = &y[0];
@@ -39,4 +38,4 @@ protected:
 
 }//end namespace
 
-#endif //INTEGRATOR_DISSIPATED_EULER_HPP
+#endif //INTEGRATOR_EULER_MARUYAMA_SCHEME_HPP
