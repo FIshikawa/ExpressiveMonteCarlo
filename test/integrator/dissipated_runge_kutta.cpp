@@ -1,11 +1,10 @@
 #include <gtest/gtest.h>
-#include <ensemble/hybrid_monte_carlo.hpp>
 #include <physics/harmonic_oscillator_fixed_end.hpp>
 #include <lattice/chain.hpp>
-#include <limits>
+#include <integrator/dissipated_runge_kutta.hpp>
 
 namespace {
-class HybridMonteCarloTest: public ::testing::Test {
+class DissipatedRungeKuttaTest: public ::testing::Test {
   protected:  
   virtual void SetUp(){
     // set by lattice::Chain
@@ -20,9 +19,9 @@ class HybridMonteCarloTest: public ::testing::Test {
     // set interaction constants 
     J = 1.0;
     temperture = 1.0;
-    dt = 0.1;
-    total_accept = 1;
-    relax_time = 10;
+    gamma = 2.0;
+    dt = 0.01;
+    N_time = 1e+2;
     num_iteration = 1e+4;
     // set hamiltonian
     z.resize(2*num_particles);
@@ -32,26 +31,29 @@ class HybridMonteCarloTest: public ::testing::Test {
       else z[i] = 0;
     }
   }
-  std::vector<double> z;
-  int num_particles, N_adj,total_accept, num_iteration;
-  double temperture, J, relax_time, dt;
+
+  int  num_particles, N_adj, N_time, num_iteration;
+  double J, temperture, gamma, dt;
   std::vector<std::vector<int> > pair_table;
+  std::vector<double> z;
 };
 
-TEST_F(HybridMonteCarloTest, BasicTest) {
+TEST_F(DissipatedRungeKuttaTest, BasicTest) {
+  // set integrator 
+  integrator::DissipatedRungeKutta integrator(2*num_particles, temperture, gamma);
+
   hamiltonian::HarmonicOscillatorFixedEnd hamiltonian(num_particles,J,pair_table,N_adj);
-  // set random numbers
+
+   // set random numbers
   std::size_t seed = 1234;
   std::mt19937 mt(seed);
-  // create data set
-  ensemble::HybridMonteCarlo sampler(num_particles, temperture, dt, relax_time, total_accept);
 
   double internal_enegy = 0.0;
   double potential_energy = 0.0;
   double kinetic_energy = 0.0;
 
   for(int mc_step = 0; mc_step < num_iteration; ++mc_step){
-    sampler.sample(z, hamiltonian, mt);
+    for(int step = 0; step < N_time; ++step) integrator.step(0.0,dt,z,hamiltonian,mt);
 
     internal_enegy += hamiltonian.energy(0.0,z)/num_particles/num_iteration;
     potential_energy += hamiltonian.potential_energy(0.0,z)/num_particles/num_iteration;
@@ -60,7 +62,7 @@ TEST_F(HybridMonteCarloTest, BasicTest) {
 
   double expected_energy = temperture;
 
-  double error = std::sqrt(1.0/num_iteration) * 2;
+  double error = std::sqrt(1.0/num_iteration) * 5;
 
   std::cout << "expected_error : " << error << std::endl;
   std::cout << "internal_enegy : " << internal_enegy << std::endl;

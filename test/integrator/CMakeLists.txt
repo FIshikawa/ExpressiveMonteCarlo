@@ -1,7 +1,7 @@
 set(PROGS
-  metropolis
-  langevin_thermostat
-  hybrid_monte_carlo
+  dissipated_runge_kutta
+  velocity_velret
+  yoshida_4th
 )
 foreach(name ${PROGS})
   set(target_name test_${name})

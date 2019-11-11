@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
-#include <ensemble/hybrid_monte_carlo.hpp>
+#include <ensemble/langevin_thermostat.hpp>
 #include <physics/harmonic_oscillator_fixed_end.hpp>
 #include <lattice/chain.hpp>
 #include <limits>
 
 namespace {
-class HybridMonteCarloTest: public ::testing::Test {
+class LangevinThermostatTest: public ::testing::Test {
   protected:  
   virtual void SetUp(){
     // set by lattice::Chain
@@ -20,10 +20,10 @@ class HybridMonteCarloTest: public ::testing::Test {
     // set interaction constants 
     J = 1.0;
     temperture = 1.0;
-    dt = 0.1;
-    total_accept = 1;
-    relax_time = 10;
+    dt = 0.01;
+    relax_time = 1.0;
     num_iteration = 1e+4;
+    gamma = 2.0;
     // set hamiltonian
     z.resize(2*num_particles);
     for(int i = 0 ; i < num_particles ; ++i){
@@ -33,18 +33,18 @@ class HybridMonteCarloTest: public ::testing::Test {
     }
   }
   std::vector<double> z;
-  int num_particles, N_adj,total_accept, num_iteration;
-  double temperture, J, relax_time, dt;
+  int num_particles, N_adj, total_accept, num_iteration;
+  double temperture, J, relax_time, dt, gamma;
   std::vector<std::vector<int> > pair_table;
 };
 
-TEST_F(HybridMonteCarloTest, BasicTest) {
+TEST_F(LangevinThermostatTest, BasicTest) {
   hamiltonian::HarmonicOscillatorFixedEnd hamiltonian(num_particles,J,pair_table,N_adj);
   // set random numbers
   std::size_t seed = 1234;
   std::mt19937 mt(seed);
   // create data set
-  ensemble::HybridMonteCarlo sampler(num_particles, temperture, dt, relax_time, total_accept);
+  ensemble::LangevinThermostat sampler(num_particles, temperture, dt, gamma, relax_time);
 
   double internal_enegy = 0.0;
   double potential_energy = 0.0;
@@ -60,7 +60,7 @@ TEST_F(HybridMonteCarloTest, BasicTest) {
 
   double expected_energy = temperture;
 
-  double error = std::sqrt(1.0/num_iteration) * 2;
+  double error = std::sqrt(1.0/num_iteration) * 5;
 
   std::cout << "expected_error : " << error << std::endl;
   std::cout << "internal_enegy : " << internal_enegy << std::endl;
