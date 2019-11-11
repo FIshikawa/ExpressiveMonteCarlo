@@ -1,81 +1,81 @@
 #include <gtest/gtest.h>
-#include <limits>
-#include <lattice/chain.hpp>
 #include <ensemble/hybrid_monte_carlo.hpp>
-#include <integrator/position_velret.hpp>
-
-using Potential = std::function<double(std::vector<double> const &)>;
-using Gradient = std::function<double(int,std::vector<double>&,Potential)>; 
-using Integrator = integrator::PositionVelret;
+#include <physics/harmonic_oscillator_fixed_end.hpp>
+#include <lattice/chain.hpp>
+#include <limits>
 
 namespace {
-class HybridMonteCarloEnsemblerTest : public ::testing::Test {
-protected:
+class HybridMonteCarloTest: public ::testing::Test {
+  protected:  
   virtual void SetUp(){
-
-    // set constants
-    num_particles = 1;
+    // set by lattice::Chain
+    int Ns = 2;
+    lattice::Chain lattice(Ns);
+    num_particles = lattice.set_num_particles(Ns); 
+    ASSERT_EQ(num_particles, Ns);
+    N_adj = lattice.number_adjacent();
+    ASSERT_EQ(N_adj,2);
+    pair_table = std::vector<std::vector<int> >(num_particles,std::vector<int>(N_adj));
+    lattice.create_table(pair_table);
+    // set interaction constants 
     J = 1.0;
-    precision = std::numeric_limits<double>::epsilon();
     temperture = 1.0;
-    time_steps = 1e+2;
-    dt = 1e-2;
-
-    // set vector
-    z.resize(num_particles);
-    for(int i = 0; i < num_particles; ++i) z[i] = 0.0;
-
-    // set functions
-    // set potential
-    double J_temp = J;
-    int num_particles_temp = num_particles;
-    potential = [J_temp,num_particles_temp](std::vector<double> const & z){
-      double ene = 0;
-      for(int i = 0; i < num_particles_temp; ++i) ene += J_temp * z[i] * z[i]; 
-      return ene;
-    };
-
-    // set gradient
-    double epsilon = 1e-3;
-    gradient = [epsilon](int i, std::vector<double> & z, Potential potential){
-      double *x = &z[0];
-      double x_temp = x[i];
-      double x_backward = x[i] - epsilon;
-      double x_forward = x[i] + epsilon;
-      x[i] = x_backward;
-      double ene_backward = potential(z);
-      x[i] = x_forward;
-      double ene_forward= potential(z);
-      x[i] = x_temp;
-      return -1.0*(ene_forward - ene_backward)/(2.0*epsilon);
-    };
-    // alternartively, 
-    // gradient = [J_temp](int i , std::vector<double> & z, Potential potential){
-    //   double *x = &z[0];
-    //   return -1.0 * J_temp * x[i]
-    // }
-  } 
-  
-  Potential potential;
-  Gradient gradient;
+    dt = 0.1;
+    total_accept = 1;
+    relax_time = 5;
+    num_iteration = 1e+4;
+    // set hamiltonian
+    z.resize(2*num_particles);
+    for(int i = 0 ; i < num_particles ; ++i){
+      z[i+num_particles] = 1.0;
+      if(i % 2 == 0) z[i] = 2.0;
+      else z[i] = 0;
+    }
+  }
   std::vector<double> z;
-  int num_particles,time_steps;
-  double J,precision,temperture,dt;
+  int num_particles, N_adj,total_accept, num_iteration;
+  double temperture, J, relax_time, dt;
   std::vector<std::vector<int> > pair_table;
 };
 
-TEST_F(HybridMonteCarloEnsemblerTest, BasicTest){
-  int counter = 0;
+TEST_F(HybridMonteCarloTest, BasicTest) {
+  hamiltonian::HarmonicOscillatorFixedEnd hamiltonian(num_particles,J,pair_table,N_adj);
+  // set random numbers
   std::size_t seed = 1234;
   std::mt19937 mt(seed);
+  // create data set
+  ensemble::HybridMonteCarlo sampler(num_particles, temperture, dt, relax_time, total_accept);
 
-  Integrator integrator(2*num_particles);
-  ensemble::HybridMonteCarlo<Potential, Integrator, Gradient> hybrid_monte_carlo(potential,gradient,num_particles,time_steps,dt);
-  hybrid_monte_carlo.montecalro(z,mt,temperture,counter);
-  ASSERT_EQ(counter,1);
-} 
+  double internal_enegy = 0.0;
+  double potential_energy = 0.0;
+  double kinetic_energy = 0.0;
 
-}// end namespace
+  for(int mc_step = 0; mc_step < num_iteration; ++mc_step){
+    sampler.sample(z, hamiltonian, mt);
+
+    internal_enegy += hamiltonian.energy(0.0,z)/num_particles/num_iteration;
+    potential_energy += hamiltonian.potential_energy(0.0,z)/num_particles/num_iteration;
+    kinetic_energy += hamiltonian.kinetic_energy(0.0,z)/num_particles/num_iteration;
+  }
+
+  double expected_energy = temperture;
+
+  double error = std::sqrt(1.0/num_iteration) * 2;
+
+  std::cout << "expected_error : " << error << std::endl;
+  std::cout << "internal_enegy : " << internal_enegy << std::endl;
+  std::cout << "kinetic_energy: " << kinetic_energy << std::endl;
+  std::cout << "potential_energy: " << potential_energy << std::endl;
+
+  double expected_internal = 0.5 * 2.0 * temperture;
+  std::cout << "expected_internal : " << expected_internal << std::endl;
+
+  EXPECT_NEAR(potential_energy/(expected_internal/2.0),1.0,error);
+  EXPECT_NEAR(kinetic_energy/(expected_internal/2.0),1.0,error);
+  EXPECT_NEAR(internal_enegy/expected_internal,1.0,error);
+}
+
+}//end namespace
 
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
