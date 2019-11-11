@@ -4,62 +4,61 @@
 #include <cmath>
 #include <string>
 #include <random>
-#include <functional>
+
+#include <integrator/yoshida_4th.hpp>
 
 namespace ensemble{
 
-template<typename Potential, class Integrator, typename Gradient>
 class HybridMonteCarlo{
 public:
-  static std::string name() { return "Hybrid Monte Calro method"; }
-  HybridMonteCarlo(Potential potential, Gradient gradient, int num_particles, int time_steps, double dt)
-                  : num_particles_(num_particles),integrator_(2*num_particles),k1_(2*num_particles),k2_(2*num_particles), time_steps_(time_steps),dt_(dt)
-                  {potential_ = potential; force_set(potential,gradient);}
+  static std::string name() { return "Hybrid Monte Carlo"; }
+  HybridMonteCarlo(int num_particles, double temperture, double dt, double relax_time, int total_accept) : 
+    num_particles_(num_particles), temperture_(temperture), dt_(dt), total_step_(static_cast<int>(relax_time/dt)), 
+    total_accept_(total_accept), integrator_(2*num_particles) {} 
 
-  void montecalro(std::vector<double>& z, std::mt19937 & mt, double temperture, int& counter){
-    std::normal_distribution<> normal_dist(0.0,std::sqrt(temperture));
-    for(int i = 0;i < num_particles_;++i) k1_[i] = z[i];
-    for(int i = 0;i < num_particles_;++i) k1_[i+num_particles_] = normal_dist(mt);
-    k2_ = k1_;
-    for(int step = 0 ; step < time_steps_;++step) integrator_.step(0.0, dt_, k2_, force_);
-    double ene_past = potential_(k1_) + kinetic(k1_);
-    double ene_new  = potential_(k2_) + kinetic(k2_);
-    double acceptance = std::exp(-1.0/temperture * ene_new)/std::exp(-1.0/temperture * ene_past);
-    std::uniform_real_distribution<> uniform_random(0,1.0);
-    double dice = uniform_random(mt);
-    if(acceptance > dice){
+  template <class Rand, class F>
+  void sample(std::vector<double>& z, F const& f, Rand & mt) const {
+    int counter = 0;
+    while(counter < total_accept_) montecarlo(z, counter, f, mt);
+  }
+
+  template <class Rand, class F>
+  void montecarlo(std::vector<double>& z, int& counter, F const& f, Rand & mt) const {
+    // const double kB = 1.38064852 / pow(10.0,23.0);
+    equilibrate_velocity(z, mt);
+    std::vector<double> z_t = z;
+    for(int step = 0; step < total_step_; ++step) integrator_.step(0.0, dt_, z_t, f);
+
+    double new_dE = f.energy(0.0,z_t);
+    double past_dE = f.energy(0.0,z);
+
+    double dP = std::exp(-1.0 / temperture_ * (new_dE - past_dE));
+
+    std::uniform_real_distribution<> realdist(0,1.0);
+    double P_accept = realdist(mt);
+   
+    if(dP > P_accept){
+      z = z_t;
       counter += 1;
-      for(int i = 0;i < num_particles_;++i) z[i] = k2_[i];
     }
   }
 
-  double kinetic(std::vector<double> z){
-    double ene = potential_(z);
-    for(int i = 0;i < num_particles_;++i) ene += 0.5 * z[num_particles_+i] * z[num_particles_+i];
-    return ene;
-  }
-
-  void force_set(Potential potential, Gradient gradient){
-    int num_particles = num_particles_;
-    force_ = [num_particles, gradient, potential](double t, std::vector<double> & z, std::vector<double>& force){
-      double *x = &z[0];
-      double *v = &z[num_particles];
-      double *fx = &force[0];
-      double *fv = &force[num_particles];
-      for(int i = 0; i < num_particles; ++i) fx[i] = v[i];
-      for(int i = 0; i < num_particles ; ++i) fv[i] = gradient(i,z,potential);
-    };
+  template <class Rand>
+  void equilibrate_velocity(std::vector<double>& z, Rand & mt, double temperture = -1.0) const {
+    if(temperture < 0.0) temperture = temperture_;
+    double beta = std::sqrt(temperture);
+    std::normal_distribution<> normal_dist(0.0,1.0);
+    double *v = &z[num_particles_]; 
+    for(int i = 0; i < num_particles_; ++i) v[i] = beta * normal_dist(mt);
   }
 
 private:
-  Potential potential_;
-  Integrator integrator_; 
-  std::function<void(double,std::vector<double>&,std::vector<double>&)> force_;
-  int num_particles_,time_steps_;
-  double dt_;
-  mutable std::vector<double> k1_,k2_;
-};
+  int num_particles_, total_accept_, total_step_;
+  double temperture_, dt_;
+  integrator::Yoshida4th integrator_;
+}; 
 
 } //end namespace
 
-#endif //ENSEMBLE_HYBRID_MONTECARLO_HPP
+#endif //ENSEMBLE_METROPOLIS_CLASSICAL_XY_HPP
+
