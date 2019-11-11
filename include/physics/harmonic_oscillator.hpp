@@ -59,14 +59,14 @@ public:
     }
   }
 
-  int nd()const { return nd_ ;}
+  int Nd()const { return Nd_ ;}
   int table(int i, int j)const{ return table_[i][j];} 
 
 private:
   int n_;
-  double j_;
+  double J_;
   std::vector<std::vector<int> > table_;
-  int nd_;
+  int Nd_;
 };
 
 } //end namespace
