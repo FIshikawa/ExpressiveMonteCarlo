@@ -1,12 +1,18 @@
 image: ubuntu:14.04
 
 job:
-  script:
+  before_script:
     - apt-get update
-    - apt-get install -y git cmake g++ gcovr
+    - apt-get install -y make cmake boost-devel git g++ gcovr    
     - git submodule update --init --recursive
+    - mkdir -p $HOME/.local
+    - curl -s "https://cmake.org/files/v3.15/cmake-3.15.4-Linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C $HOME/.local
+    - export PATH=$HOME/.local/bin:$PATH
+
+  script:
     - mkdir build
     - cd build
     - cmake ..
     - make -j
-    - gcovr -r ../src/
+    - ctest
+    - gcov -r ../test/
