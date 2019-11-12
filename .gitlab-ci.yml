@@ -2,6 +2,8 @@ image: ubuntu:14.04
 
 job:
   script:
+    - apt-get install software-properties-common
+    - add-apt-repository ppa:george-edison55/cmake-3.x
     - apt-get update
     - apt-get install -y git cmake g++ gcovr
     - git submodule update --init --recursive
