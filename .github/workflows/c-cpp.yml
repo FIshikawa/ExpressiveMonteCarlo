@@ -1,0 +1,19 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-16.04
+    
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - name: cmake
+      run: mkdir build && cd build ..
+    - name: make
+      run: cd build && make
+    - name: ctest
+      run: cd build && ctest -V
