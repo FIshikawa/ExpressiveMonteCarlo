@@ -13,9 +13,10 @@ template<typename Potential, typename Proposer>
 class Metropolis{
 public:
   static std::string name() { return "Metropolis method"; }
-  Metropolis(Potential target_potential,Proposer proposer) 
+  Metropolis(Potential const target_potential,Proposer const proposer) 
             {target_potential_ = target_potential; proposer_ = proposer;}
-  void montecalro(std::vector<double>& z, std::mt19937 & mt, double temperture, int& counter){
+  void montecalro(std::vector<double>& z, std::mt19937 & mt, 
+                                      double temperture, int& counter){
     // const double kB = 1.38064852 / pow(10.0,23.0);
     std::pair<int, double> new_values = proposer_(z,mt);
     int target = new_values.first;
@@ -26,7 +27,8 @@ public:
     z[target] = past_value;
     double ene_past = target_potential_(target,z);
     
-    double acceptance = std::exp(-1.0/temperture * ene_new)/std::exp(-1.0/temperture * ene_past);
+    double acceptance = 
+      std::exp(-1.0/temperture * (ene_new - ene_past));
     std::uniform_real_distribution<> uniform_random(0,1.0);
     double dice = uniform_random(mt);
    
