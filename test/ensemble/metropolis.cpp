@@ -23,11 +23,12 @@ protected:
 
     // set constants
     J = -1.0;
-    temperture = 3;
+    temperture = 3.0;
 
     // set vector
     z.resize(num_particles);
     for(int i = 0; i < num_particles; ++i) z[i] = std::pow(1,i);
+    z[0] = -1;
 
     // set functions
     // set target potential
@@ -69,41 +70,41 @@ protected:
   std::vector<std::vector<int> > pair_table;
 };
 
-TEST_F(MetropolisEnsemblerTest, BasicTest){
-  std::size_t seed = 42;
-  std::mt19937 mt(seed);
-
-  std::vector<double> z_previous(z);
-  ensemble::Metropolis<Potential, Proposer> 
-                        metropolis(target_potential,proposer);
-  int num_iteration = 1;
-  for(int counter = 0; counter < num_iteration;){
-    std::cout << "<< counter : " << counter << " >>" << std::endl;
-    std::cout << "  [before]" << std::endl;
-    for(int i = 0; i < num_particles; ++i){
-      std::cout << "    i : " << i << " z[i] : " << z[i] << std::endl;
-      std::cout << "    target E : " 
-                << target_potential(i,z) 
-                << std::endl;
-    }
-    metropolis.montecalro(z,mt,temperture,counter);
-    std::cout << "  [after]" << std::endl;
-    for(int i = 0; i < num_particles; ++i){
-      std::cout << "    i : " << i << " z[i] : " << z[i] << std::endl;
-      std::cout << "    target E : " 
-                << target_potential(i,z) 
-                << std::endl;
-    }
-  }
-  ASSERT_FALSE(z == z_previous);
-} 
+//TEST_F(MetropolisEnsemblerTest, BasicTest){
+//  std::size_t seed = 42;
+//  std::mt19937 mt(seed);
+//
+//  std::vector<double> z_previous(z);
+//  ensemble::Metropolis<Potential, Proposer> 
+//                        metropolis(target_potential,proposer);
+//  int num_iteration = 1;
+//  for(int counter = 0; counter < num_iteration;){
+//    std::cout << "<< counter : " << counter << " >>" << std::endl;
+//    std::cout << "  [before]" << std::endl;
+//    for(int i = 0; i < num_particles; ++i){
+//      std::cout << "    i : " << i << " z[i] : " << z[i] << std::endl;
+//      std::cout << "    target E : " 
+//                << target_potential(i,z) 
+//                << std::endl;
+//    }
+//    metropolis.montecalro(z,mt,temperture,counter);
+//    std::cout << "  [after]" << std::endl;
+//    for(int i = 0; i < num_particles; ++i){
+//      std::cout << "    i : " << i << " z[i] : " << z[i] << std::endl;
+//      std::cout << "    target E : " 
+//                << target_potential(i,z) 
+//                << std::endl;
+//    }
+//  }
+//  ASSERT_FALSE(z == z_previous);
+//} 
 
 TEST_F(MetropolisEnsemblerTest, ThermodynamicCheck){
-  std::size_t seed = 42;
+  std::size_t seed = 40;
   std::mt19937 mt(seed);
   int num_iteration = 1E+4;
   int dummy;
-  int cooling_time = 100;
+  int cooling_time = 101;
   double mean = 0;
   double var  = 0.0;
   Potential target_potential_temp = target_potential;
@@ -124,13 +125,22 @@ TEST_F(MetropolisEnsemblerTest, ThermodynamicCheck){
 
   ensemble::Metropolis<Potential, Proposer> 
                     metropolis(target_potential,proposer);
+  int cooling_t = 1;
+  std::cout << "before" << std::endl;
+  for(int i = 0; i < z.size(); ++i) std::cout << " " << z[i];
+  std::cout << std::endl;
+  metropolis.montecalro(z,mt,temperture,cooling_t);
+
+  std::cout << "after" << std::endl;
+  for(int i = 0; i < z.size(); ++i) std::cout << " " << z[i];
+  std::cout << std::endl;
+
   for(int cooling = 0; cooling < 10 * cooling_time;)
     metropolis.montecalro(z,mt,temperture,cooling);
 
   double ene_tt = 0;
   for(int counter = 0; counter < num_iteration; ++counter){
-    for(int cooling = 0; cooling < cooling_time;)
-      metropolis.montecalro(z,mt,temperture,cooling);
+    metropolis.montecalro(z,mt,temperture,dummy);
     ene_tt = total_energy_func(dummy, z);
     mean += ene_tt;
     var += ene_tt * ene_tt;
